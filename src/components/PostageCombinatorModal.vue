@@ -109,7 +109,7 @@
                   step="0.1"
                   placeholder="例如：25"
                   @keyup.enter="handleEnterKey"
-                  class="input w-full text-sm focus:ring-warning-500 focus:border-warning-500 mb-3 weight-input"
+                  class="input mb-3 w-full text-sm focus:ring-0 focus:outline-none focus:border-warning-500 weight-input"
                 />
                 <button
                   @click="calculatePostage"

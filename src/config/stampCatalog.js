@@ -18,6 +18,7 @@ export function createDefaultStamps() {
   return STAMP_CATALOG.map(({ denomination }) => ({
     denomination,
     remainingCount: 0,
+    remainingLocked: false,
     purchaseCount: 0,
     purchaseMode: 'auto',
     fixedPurchaseCount: 0,

@@ -13,7 +13,7 @@ import {
 const CONFIG = {
   STORAGE_KEY: 'postageCalculatorData',
   BACKUP_STORAGE_KEY: 'postageCalculatorData.backup',
-  SCHEMA_VERSION: 2,
+  SCHEMA_VERSION: 3,
   DEBOUNCE_DELAY: 500,
   ROC_BASE_YEAR: 1911,
   MAX_FUTURE_YEARS: 10,
@@ -268,6 +268,10 @@ export function useLocalStorage() {
           monthlyPostageRecords: sanitizeRecordsData(data.monthlyPostageRecords || []),
           currentRuleMode: validateRuleMode(data.currentRuleMode),
           reportData: sanitizeReportData(data.reportData),
+          mailRecords: sanitizeMailRecords(data.mailRecords || []),
+          stampInventoryTransactions: sanitizeInventoryTransactions(
+            data.stampInventoryTransactions || []
+          ),
         }
       },
       {},
@@ -330,6 +334,62 @@ export function useLocalStorage() {
       }))
   }
 
+  function sanitizeMailRecords(records) {
+    if (!Array.isArray(records)) return []
+    return records
+      .filter(record => record && typeof record === 'object' && typeof record.id === 'string')
+      .map(record => ({
+        id: record.id,
+        status:
+          record.status === 'draft'
+            ? 'pending'
+            : record.status === 'void'
+              ? 'cancelled'
+              : ['pending', 'sent', 'cancelled'].includes(record.status)
+                ? record.status
+                : 'pending',
+        sentDate: typeof record.sentDate === 'string' ? record.sentDate.slice(0, 10) : '',
+        sender: String(record.sender || '').slice(0, 200),
+        referenceNumber: String(record.referenceNumber || '').slice(0, 200),
+        recipient: String(record.recipient || '').slice(0, 200),
+        recipientAddress: String(record.recipientAddress || '').slice(0, 500),
+        mailType: String(record.mailType || '').slice(0, 80),
+        weight: Number.isFinite(Number(record.weight)) ? Number(record.weight) : null,
+        postage: Math.max(0, Number(record.postage) || 0),
+        trackingNumber: String(record.trackingNumber || '').slice(0, 100),
+        stampCombination: sanitizeStampCombination(record.stampCombination),
+        notes: String(record.notes || '').slice(0, 1000),
+        createdAt: typeof record.createdAt === 'string' ? record.createdAt : '',
+        confirmedAt: typeof record.confirmedAt === 'string' ? record.confirmedAt : '',
+        cancelledAt: typeof record.cancelledAt === 'string' ? record.cancelledAt : '',
+        cancellationReason: String(record.cancellationReason || '').slice(0, 500),
+        stockReturned: Boolean(record.stockReturned),
+      }))
+  }
+
+  function sanitizeInventoryTransactions(transactions) {
+    if (!Array.isArray(transactions)) return []
+    return transactions
+      .filter(item => item && typeof item === 'object' && typeof item.id === 'string')
+      .map(item => ({
+        id: item.id,
+        recordId: String(item.recordId || ''),
+        occurredAt: typeof item.occurredAt === 'string' ? item.occurredAt : '',
+        type: ['mailing_debit', 'mailing_credit'].includes(item.type) ? item.type : 'mailing_debit',
+        combination: sanitizeStampCombination(item.combination),
+      }))
+  }
+
+  function sanitizeStampCombination(combination) {
+    if (!Array.isArray(combination)) return []
+    return combination
+      .map(item => ({
+        denomination: Math.floor(Number(item?.denomination)),
+        count: Math.floor(Number(item?.count)),
+      }))
+      .filter(item => item.denomination > 0 && item.count > 0)
+  }
+
   /**
    * 清理採購資料
    */
@@ -371,6 +431,7 @@ export function useLocalStorage() {
         return {
           denomination: parseInt(stamp.denomination, 10),
           remainingCount: normalizePurchaseCount(stamp.remainingCount),
+          remainingLocked: Boolean(stamp.remainingLocked),
           purchaseCount:
             purchaseMode === 'fixed'
               ? fixedPurchaseCount

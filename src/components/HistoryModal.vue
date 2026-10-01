@@ -10,7 +10,7 @@
           aria-labelledby="history-title"
         >
           <ModalHeader
-            title="歷史採購紀錄管理"
+            title="歷史採購紀錄"
             title-id="history-title"
             title-class="text-fuchsia-600"
             fullscreen-enabled
@@ -83,7 +83,7 @@
                       @input="$emit('update-current-record-month', $event.target.value)"
                       @blur="$emit('handle-month-input-blur')"
                       placeholder="例如：202506、11307、114.5"
-                      class="input focus:ring-fuchsia-500 focus:border-fuchsia-500 w-48"
+                      class="input h-[38px] text-sm focus:ring-fuchsia-500 focus:border-fuchsia-500 w-48"
                     />
                   </div>
 
@@ -124,7 +124,7 @@
                       "
                       min="0"
                       step="1"
-                      class="input text-right focus:ring-fuchsia-500 focus:border-fuchsia-500"
+                      class="input h-[38px] text-right text-sm focus:ring-fuchsia-500 focus:border-fuchsia-500"
                     />
                   </div>
                 </div>
@@ -146,9 +146,6 @@
             </Transition>
 
             <div class="table-container">
-              <div class="table-title">
-                <h4 class="table-title-text">歷史採購紀錄</h4>
-              </div>
               <div class="overflow-x-auto custom-scrollbar">
                 <table class="table">
                   <thead>
@@ -178,7 +175,7 @@
                         :colspan="stamps.length + 2"
                         class="table-cell text-center text-slate-500 py-8"
                       >
-                        尚無歷史紀錄。請新增。
+                        尚無歷史紀錄，請新增
                       </td>
                     </tr>
                     <tr

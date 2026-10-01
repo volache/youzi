@@ -10,23 +10,23 @@
           aria-labelledby="export-options-title"
         >
           <ModalHeader
-            title="選擇匯出類型"
+            title="匯出資料與備份"
             title-id="export-options-title"
             title-class="text-secondary-600"
             @close="$emit('close')"
           />
 
           <div class="modal-body">
-            <p class="text-slate-600 mb-6">請選擇您要匯出的 CSV 檔案類型：</p>
+            <p class="text-slate-600 mb-6">下載報表、匯入資料，或設定自動備份資料夾。</p>
 
             <section class="mb-6 rounded-xl border border-secondary-200 bg-secondary-50 p-4">
-              <h4 class="font-semibold text-secondary-900">完整資料備份</h4>
+              <h4 class="font-semibold text-secondary-900">資料備份與還原</h4>
               <p class="mt-1 text-sm text-secondary-700">
                 備份包含庫存、規則、歷史紀錄與採購報告，可在本系統還原。
               </p>
               <div class="mt-3 flex flex-wrap gap-3">
                 <button @click="$emit('export-backup')" class="btn-secondary text-sm">
-                  匯出備份檔
+                  下載備份檔
                 </button>
                 <label
                   class="btn bg-white text-secondary-700 border border-secondary-300 hover:bg-secondary-100 text-sm cursor-pointer"
@@ -40,6 +40,52 @@
                   />
                 </label>
               </div>
+            </section>
+
+            <section class="mb-6 rounded-xl border border-primary-200 bg-primary-50 p-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 class="font-semibold text-primary-900">自動備份資料夾</h4>
+                  <p class="mt-1 text-sm text-primary-800">
+                    {{ backupDescription }}
+                  </p>
+                </div>
+                <span
+                  class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                  :class="backupStatusClass"
+                  >{{ backupStatusLabel }}</span
+                >
+              </div>
+              <p class="mt-3 text-xs text-primary-700">
+                系統只管理所選資料夾內「郵資大師備份／snapshots」的自動備份，超過 50
+                份時只刪除最舊的自動備份。
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  v-if="backupSupported"
+                  class="btn bg-primary-600 text-sm text-white hover:bg-primary-700"
+                  @click="$emit('choose-backup-directory')"
+                >
+                  {{ backupConfigured ? '變更備份資料夾' : '設定備份資料夾' }}
+                </button>
+                <button
+                  v-if="backupConfigured"
+                  class="btn bg-white text-sm text-primary-700 ring-1 ring-primary-300 hover:bg-primary-100"
+                  @click="$emit('backup-now')"
+                >
+                  立即備份
+                </button>
+                <button
+                  v-if="backupConfigured"
+                  class="btn bg-transparent text-sm text-slate-600 hover:bg-primary-100"
+                  @click="$emit('disconnect-backup-directory')"
+                >
+                  中斷連結
+                </button>
+              </div>
+              <p v-if="!backupSupported" class="mt-3 text-xs text-amber-700">
+                目前瀏覽器不支援指定資料夾，仍可使用「下載備份檔」與「匯入備份檔」。
+              </p>
             </section>
 
             <div class="space-y-4">
@@ -326,13 +372,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ModalHeader from './ModalHeader.vue'
 import AppIcon from './AppIcon.vue'
-
-defineProps({
-  show: Boolean,
-  monthlyPostageRecords: Array,
-})
 
 const emit = defineEmits([
   'close',
@@ -343,7 +385,39 @@ const emit = defineEmits([
   'export-monthly-analysis',
   'export-backup',
   'import-backup',
+  'choose-backup-directory',
+  'backup-now',
+  'disconnect-backup-directory',
 ])
+
+const props = defineProps({
+  show: Boolean,
+  monthlyPostageRecords: Array,
+  backupSupported: Boolean,
+  backupConfigured: Boolean,
+  backupPermission: { type: String, default: 'prompt' },
+  autoSnapshotCount: { type: Number, default: 0 },
+})
+
+const backupStatusLabel = computed(() => {
+  if (!props.backupSupported) return '不支援'
+  if (!props.backupConfigured) return '尚未設定'
+  return props.backupPermission === 'granted' ? `已授權・${props.autoSnapshotCount}/50` : '需要授權'
+})
+
+const backupStatusClass = computed(() =>
+  props.backupPermission === 'granted'
+    ? 'bg-success-100 text-success-800'
+    : 'bg-slate-200 text-slate-700'
+)
+
+const backupDescription = computed(() => {
+  if (!props.backupSupported) return '請以下載 JSON 備份檔的方式保存資料。'
+  if (!props.backupConfigured) return '選擇一個資料夾後，可將重大操作自動保留為最近 50 份快照。'
+  return props.backupPermission === 'granted'
+    ? `已保留 ${props.autoSnapshotCount} 份自動備份；重大操作後會自動備份。`
+    : '已設定資料夾，但需要再次授予讀寫權限。'
+})
 
 function handleBackupFile(event) {
   const [file] = event.target.files || []

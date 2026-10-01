@@ -2,6 +2,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useLocalStorage } from './useLocalStorage'
 import { useOptimalPurchases } from './useOptimalPurchases'
 import { useNotifications } from './useNotifications'
+import { useMailRecords } from './useMailRecords'
 import { safeExecute } from './useErrorHandler'
 import { getPreservedPurchaseCount, normalizePurchaseMode } from './purchasePlanning'
 import {
@@ -50,6 +51,7 @@ export function usePostageCalculator() {
   const currentRecord = ref({ month: '', purchases: {} })
   const editingRecord = ref(null)
   const currentRuleMode = ref('custom') // 預設為自定義模式
+  const mailRecordState = useMailRecords({ stamps })
 
   // === 計算屬性 ===
   const stampStatistics = {
@@ -413,6 +415,8 @@ export function usePostageCalculator() {
       monthlyPostageRecords: monthlyPostageRecords.value,
       currentRuleMode: currentRuleMode.value,
       reportData: reportData.value,
+      mailRecords: mailRecordState.mailRecords.value,
+      stampInventoryTransactions: mailRecordState.stampInventoryTransactions.value,
     })
   }
 
@@ -536,6 +540,11 @@ export function usePostageCalculator() {
     if (loadedData.reportData) {
       reportData.value = loadedData.reportData
     }
+    if (Array.isArray(loadedData.mailRecords))
+      mailRecordState.mailRecords.value = loadedData.mailRecords
+    if (Array.isArray(loadedData.stampInventoryTransactions)) {
+      mailRecordState.stampInventoryTransactions.value = loadedData.stampInventoryTransactions
+    }
 
     // 載入郵票設定
     loadStampSettings(loadedData)
@@ -550,6 +559,8 @@ export function usePostageCalculator() {
     monthlyPostageRecords.value = backupData.monthlyPostageRecords
     currentRuleMode.value = backupData.currentRuleMode
     reportData.value = backupData.reportData
+    mailRecordState.mailRecords.value = backupData.mailRecords || []
+    mailRecordState.stampInventoryTransactions.value = backupData.stampInventoryTransactions || []
     loadStampSettings(backupData)
     loadIdealProportionSettings(backupData)
     sortStampData()
@@ -575,6 +586,7 @@ export function usePostageCalculator() {
         if (!isNaN(remainingCount)) {
           defaultStamp.remainingCount = Math.max(0, Math.floor(remainingCount))
         }
+        defaultStamp.remainingLocked = Boolean(storedStamp.remainingLocked)
 
         const purchaseCount = Number(storedStamp.purchaseCount)
         if (!isNaN(purchaseCount)) {
@@ -652,7 +664,16 @@ export function usePostageCalculator() {
   })
 
   watch(
-    [monthlyBudget, stamps, idealProportions, monthlyPostageRecords, currentRuleMode, reportData],
+    [
+      monthlyBudget,
+      stamps,
+      idealProportions,
+      monthlyPostageRecords,
+      currentRuleMode,
+      reportData,
+      mailRecordState.mailRecords,
+      mailRecordState.stampInventoryTransactions,
+    ],
     () => saveCurrentState(),
     { deep: true }
   )
@@ -707,6 +728,7 @@ export function usePostageCalculator() {
     currentRecord,
     editingRecord,
     currentRuleMode,
+    ...mailRecordState,
 
     // 計算屬性 - 郵票統計
     totalRemainingCount: stampStatistics.totalRemainingCount,

@@ -11,7 +11,7 @@
       <AppIcon
         name="plus-circle-outline"
         size="1.5rem"
-        class="transition-transform duration-200 group-hover:rotate-45"
+        class="transition-transform duration-200"
         :class="{ 'rotate-45': isMenuOpen }"
       />
     </button>
@@ -19,6 +19,30 @@
     <!-- 展開的子按鈕選單 -->
     <Transition name="fab-menu">
       <div v-if="isMenuOpen" class="absolute bottom-20 right-0 w-max space-y-3">
+        <!-- 歷史採購紀錄按鈕 -->
+        <div class="flex items-center justify-end space-x-3 w-full">
+          <span
+            class="fab-label"
+            :class="{ 'fab-label-show': isMenuOpen }"
+            style="transition-delay: 75ms"
+            >郵寄紀錄</span
+          >
+          <button
+            @click="handleMailRecords"
+            @mouseenter="startFabMotion('mail')"
+            @mouseleave="endFabMotion('mail')"
+            class="fab bg-primary-500 hover:bg-primary-600 text-white focus:ring-primary-300 group"
+            title="郵寄紀錄"
+          >
+            <AppIcon
+              name="email-plus-outline"
+              size="1.25rem"
+              class="fab-icon-mail"
+              :class="motionClass('mail')"
+            />
+          </button>
+        </div>
+
         <!-- 歷史採購紀錄按鈕 -->
         <div class="flex items-center justify-end space-x-3 w-full">
           <span
@@ -94,21 +118,21 @@
           </button>
         </div>
 
-        <!-- 匯出 CSV 按鈕 -->
+        <!-- 匯出資料與備份按鈕 -->
         <div class="flex items-center justify-end space-x-3 w-full">
           <span
             class="fab-label"
             :class="{ 'fab-label-show': isMenuOpen }"
             style="transition-delay: 175ms"
           >
-            匯出 CSV
+            匯出資料與備份
           </span>
           <button
             @click="handleExportCSV"
             @mouseenter="startFabMotion('download')"
             @mouseleave="endFabMotion('download')"
             class="fab bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-300 group"
-            title="匯出 CSV"
+            title="匯出資料與備份"
           >
             <AppIcon
               name="download-outline"
@@ -140,6 +164,7 @@ const emit = defineEmits([
   'open-history-modal',
   'open-advanced-settings-modal',
   'open-postage-combinator-modal',
+  'open-mail-records-modal',
   'show-export-options',
 ])
 
@@ -186,6 +211,11 @@ const closeMenu = () => {
 // 處理各種操作並關閉選單
 const handleHistory = () => {
   emit('open-history-modal')
+  closeMenu()
+}
+
+const handleMailRecords = () => {
+  emit('open-mail-records-modal')
   closeMenu()
 }
 

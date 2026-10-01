@@ -31,9 +31,6 @@
             <div v-if="isFullscreen" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <!-- 左欄：採購規則設定表格 -->
               <div class="table-container">
-                <div class="table-title">
-                  <h4 class="table-title-text">採購規則設定</h4>
-                </div>
                 <div class="overflow-x-auto custom-scrollbar">
                   <table class="table">
                     <thead>
@@ -269,9 +266,6 @@
               </div>
 
               <div class="table-container">
-                <div class="table-title">
-                  <h4 class="table-title-text">採購規則設定</h4>
-                </div>
                 <div class="overflow-x-auto custom-scrollbar">
                   <table class="table">
                     <thead>

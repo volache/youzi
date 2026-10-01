@@ -103,7 +103,7 @@
 
   /* 輸入框樣式 */
   .input {
-    @apply w-full px-3 py-2 border border-slate-300 rounded-input shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+    @apply w-full px-3 py-2 border border-slate-300 rounded-input shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
   }
 
   .input-error {
@@ -153,7 +153,7 @@
   }
 
   .table-input {
-    @apply w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+    @apply w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
   }
 
   .table-row {
@@ -279,7 +279,11 @@
   }
 
   .fab-icon-gear.fab-motion-in {
-    transform: rotate(150deg);
+    animation: fab-spin 1.5s linear infinite;
+  }
+
+  .fab-icon-mail.fab-motion-in {
+    animation: fab-wiggle 780ms ease-in-out infinite;
   }
 
   .fab-icon-calculator.fab-motion-in {
@@ -327,13 +331,31 @@
   @keyframes fab-download-drop {
     0%,
     100% {
-      transform: translateY(0);
+      transform: translateY(-2px);
+      opacity: 0.8;
     }
-    45% {
-      transform: translateY(5px);
+    55% {
+      transform: translateY(3px);
+      opacity: 1;
     }
-    62% {
-      transform: translateY(2px);
+  }
+
+  @keyframes fab-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fab-wiggle {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(-13deg);
+    }
+    75% {
+      transform: rotate(13deg);
     }
   }
 
@@ -343,7 +365,18 @@
   }
 
   .fab-main:hover {
-    transform: translateY(-2px) scale(1.03);
+    transform: translateY(-2px) scale(1.06);
+    animation: fab-main-pulse 900ms ease-in-out infinite;
+  }
+
+  @keyframes fab-main-pulse {
+    0%,
+    100% {
+      box-shadow: 0 14px 22px -10px rgb(15 23 42 / 55%);
+    }
+    50% {
+      box-shadow: 0 18px 28px -9px rgb(37 99 235 / 55%);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

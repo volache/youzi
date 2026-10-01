@@ -491,6 +491,28 @@ export function usePostageCombinator(stamps) {
   }
 
   /**
+   * 只根據已知郵資尋找組合。郵寄紀錄可用它處理包裹、快捷等
+   * 不由本機費率表計價的項目，同時保持與計算器相同的組合邏輯。
+   */
+  function calculateCombinationsForPostage(amount) {
+    resetCalculationResults()
+    const target = Number(amount)
+    if (!Number.isFinite(target) || target <= 0 || !Number.isInteger(target)) {
+      errorMessage.value = '請輸入大於 0 的整數郵資'
+      return
+    }
+
+    postage.value = target
+    calculatingCombinations.value = true
+    const calculationId = ++currentCalculationId
+    setTimeout(() => {
+      if (calculationId !== currentCalculationId) return
+      findStampCombinations(target)
+      if (calculationId === currentCalculationId) calculatingCombinations.value = false
+    }, 0)
+  }
+
+  /**
    * 格式化郵票組合顯示
    */
   function getFormattedStamps(combination) {
@@ -529,6 +551,7 @@ export function usePostageCombinator(stamps) {
     // 方法
     selectMailType,
     calculatePostage,
+    calculateCombinationsForPostage,
     getFormattedStamps,
 
     // 偏好管理方法

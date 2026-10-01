@@ -5,16 +5,13 @@
       <!-- 左側：統計日期 -->
       <div class="flex items-center space-x-4">
         <div class="flex items-center space-x-2">
-          <label for="calcStatDate" class="text-sm font-medium text-slate-700 whitespace-nowrap"
-            >統計日期</label
-          >
-          <input
-            type="date"
-            id="calcStatDate"
-            :value="statisticsDate"
-            @input="$emit('update:statistics-date', $event.target.value)"
-            class="input text-sm"
-          />
+          <label class="text-sm font-medium text-slate-700 whitespace-nowrap">統計日期</label>
+          <div class="w-44">
+            <CustomDatePicker
+              :model-value="statisticsDate"
+              @update:model-value="$emit('update:statistics-date', $event)"
+            />
+          </div>
         </div>
       </div>
 
@@ -61,9 +58,45 @@
           <thead>
             <tr>
               <th class="table-header text-center border-r border-slate-200">面額<br />（NT$）</th>
-              <th class="table-header text-right border-r border-slate-200">剩餘郵票<br />張數</th>
+              <th class="table-header border-r border-slate-200">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    class="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    :title="
+                      allRemainingLocked ? '解除全部剩餘郵票張數鎖定' : '鎖定全部剩餘郵票張數'
+                    "
+                    :aria-label="
+                      allRemainingLocked ? '解除全部剩餘郵票張數鎖定' : '鎖定全部剩餘郵票張數'
+                    "
+                    @click="toggleAllRemainingLocks"
+                  >
+                    <AppIcon
+                      :name="allRemainingLocked ? 'lock-outline' : 'lock-open-outline'"
+                      size="1rem"
+                    />
+                  </button>
+                  <span class="w-[72px] text-right">剩餘郵票<br />張數</span>
+                </div>
+              </th>
               <th class="table-header text-right border-r border-slate-200">剩餘郵票<br />金額</th>
-              <th class="table-header text-right border-r border-slate-200">規劃採購<br />張數</th>
+              <th class="table-header border-r border-slate-200">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    class="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    :title="allPurchaseLocked ? '解除全部規劃採購張數鎖定' : '鎖定全部規劃採購張數'"
+                    :aria-label="
+                      allPurchaseLocked ? '解除全部規劃採購張數鎖定' : '鎖定全部規劃採購張數'
+                    "
+                    @click="toggleAllPurchaseLocks"
+                  >
+                    <AppIcon
+                      :name="allPurchaseLocked ? 'lock-outline' : 'lock-open-outline'"
+                      size="1rem"
+                    />
+                  </button>
+                  <span class="w-[72px] text-right">規劃採購<br />張數</span>
+                </div>
+              </th>
               <th class="table-header text-right border-r border-slate-200">規劃採購<br />金額</th>
               <th class="table-header text-right border-r border-slate-200">合計<br />張數</th>
               <th class="table-header text-right">合計<br />金額</th>
@@ -81,29 +114,41 @@
                 {{ stamp.denomination }}
               </td>
               <td class="table-cell text-right border-r border-slate-200">
-                <input
-                  type="number"
-                  v-model.number="stamp.remainingCount"
-                  min="0"
-                  step="1"
-                  @input="$emit('sanitize-int-input', stamp, 'remainingCount', $event)"
-                  class="table-input w-24 text-right"
-                />
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    class="rounded-md p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    :class="
+                      stamp.remainingLocked
+                        ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    "
+                    :title="stamp.remainingLocked ? '解除剩餘郵票張數鎖定' : '鎖定剩餘郵票張數'"
+                    :aria-label="
+                      stamp.remainingLocked ? '解除剩餘郵票張數鎖定' : '鎖定剩餘郵票張數'
+                    "
+                    @click="stamp.remainingLocked = !stamp.remainingLocked"
+                  >
+                    <AppIcon
+                      :name="stamp.remainingLocked ? 'lock-outline' : 'lock-open-outline'"
+                      size="1rem"
+                    />
+                  </button>
+                  <input
+                    v-model.number="stamp.remainingCount"
+                    type="number"
+                    min="0"
+                    step="1"
+                    :disabled="stamp.remainingLocked"
+                    class="table-input w-[72px] text-right disabled:cursor-not-allowed disabled:border-primary-200 disabled:bg-primary-50 disabled:text-primary-800"
+                    @input="$emit('sanitize-int-input', stamp, 'remainingCount', $event)"
+                  />
+                </div>
               </td>
               <td class="table-cell text-base text-slate-600 text-right border-r border-slate-200">
                 {{ formatNumber(stamp.denomination * (stamp.remainingCount || 0)) }}
               </td>
               <td class="table-cell border-r border-slate-200">
-                <div class="flex items-center justify-end gap-2">
-                  <input
-                    type="number"
-                    v-model.number="stamp.purchaseCount"
-                    min="0"
-                    step="1"
-                    :disabled="stamp.purchaseMode === 'fixed'"
-                    @input="$emit('sanitize-int-input', stamp, 'purchaseCount', $event)"
-                    class="table-input w-24 text-right disabled:cursor-not-allowed disabled:border-primary-200 disabled:bg-primary-50 disabled:text-primary-800"
-                  />
+                <div class="flex items-center justify-end gap-1">
                   <button
                     @click="togglePurchaseLock(stamp)"
                     :title="
@@ -124,6 +169,15 @@
                       size="1rem"
                     />
                   </button>
+                  <input
+                    v-model.number="stamp.purchaseCount"
+                    type="number"
+                    min="0"
+                    step="1"
+                    :disabled="stamp.purchaseMode === 'fixed'"
+                    class="table-input w-[72px] text-right disabled:cursor-not-allowed disabled:border-primary-200 disabled:bg-primary-50 disabled:text-primary-800"
+                    @input="$emit('sanitize-int-input', stamp, 'purchaseCount', $event)"
+                  />
                 </div>
               </td>
               <td class="table-cell text-base text-slate-600 text-right border-r border-slate-200">
@@ -220,11 +274,13 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useUtils } from '../composables/useUtils'
 import { togglePurchaseLock } from '../composables/purchasePlanning'
 import AppIcon from './AppIcon.vue'
+import CustomDatePicker from './CustomDatePicker.vue'
 
-defineProps({
+const props = defineProps({
   stamps: Array,
   totalRemainingCount: Number,
   totalRemainingValue: Number,
@@ -247,4 +303,22 @@ defineEmits([
 ])
 
 const { formatNumber } = useUtils()
+const allRemainingLocked = computed(
+  () => props.stamps?.length > 0 && props.stamps.every(stamp => stamp.remainingLocked)
+)
+const allPurchaseLocked = computed(
+  () => props.stamps?.length > 0 && props.stamps.every(stamp => stamp.purchaseMode === 'fixed')
+)
+const toggleAllRemainingLocks = () => {
+  const nextLocked = !allRemainingLocked.value
+  props.stamps.forEach(stamp => {
+    stamp.remainingLocked = nextLocked
+  })
+}
+const toggleAllPurchaseLocks = () => {
+  const shouldLock = !allPurchaseLocked.value
+  props.stamps.forEach(stamp => {
+    if (shouldLock !== (stamp.purchaseMode === 'fixed')) togglePurchaseLock(stamp)
+  })
+}
 </script>
