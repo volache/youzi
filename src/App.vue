@@ -114,6 +114,7 @@
         :show="showMailRecordsModal"
         :records="sortedMailRecords"
         :initial-record="editingMailRecord"
+        :statistics-date="statisticsDate"
         :stamps="stamps"
         @close="showMailRecordsModal = false"
         @save-pending="handleSaveMailPending"
@@ -243,7 +244,7 @@ const {
 
 const showMailRecordsModal = ref(false)
 const openMailRecords = () => {
-  beginNewRecord()
+  beginNewRecord(statisticsDate.value)
   showMailRecordsModal.value = true
 }
 
@@ -340,14 +341,14 @@ const disconnectBackupDirectory = async () => {
 
 const handleSaveMailPending = record => {
   savePending(record)
-  beginNewRecord()
+  beginNewRecord(statisticsDate.value)
   showSuccessToast('已儲存待寄', '郵票庫存尚未扣除')
 }
 
 const handleConfirmMailRecord = async record => {
   try {
     confirmRecord(record)
-    beginNewRecord()
+    beginNewRecord(statisticsDate.value)
     showSuccessToast('已確認寄出', '郵票庫存已依選擇的組合扣除')
   } catch (error) {
     await showAlert(error.message || '無法確認寄出，請檢查資料與庫存。', '確認寄出失敗', 'warning')
@@ -367,7 +368,7 @@ const handleDeleteMailPending = async id => {
   const confirmed = await showConfirm('確定要刪除此待寄紀錄嗎？', '刪除待寄紀錄', 'warning')
   if (!confirmed) return
   deletePending(id)
-  beginNewRecord()
+  beginNewRecord(statisticsDate.value)
   showSuccessToast('待寄紀錄已刪除', '郵票庫存未受影響')
 }
 

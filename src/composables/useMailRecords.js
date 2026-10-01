@@ -1,9 +1,9 @@
 import { ref, computed } from 'vue'
 
-const emptyRecord = () => ({
+const emptyRecord = (sentDate = new Date().toISOString().slice(0, 10)) => ({
   id: '',
   status: 'pending',
-  sentDate: new Date().toISOString().slice(0, 10),
+  sentDate,
   sender: '',
   referenceNumber: '',
   recipient: '',
@@ -42,8 +42,8 @@ export function useMailRecords({ stamps }) {
     )
   )
 
-  const beginNewRecord = () => {
-    editingMailRecord.value = emptyRecord()
+  const beginNewRecord = sentDate => {
+    editingMailRecord.value = emptyRecord(sentDate)
   }
 
   const startEditRecord = record => {

@@ -357,7 +357,7 @@
                     </tr>
                     <tr v-if="!filteredRecords.length">
                       <td colspan="10" class="table-cell text-center text-slate-500 py-8">
-                        尚無郵寄紀錄。請新增。
+                        尚無郵寄紀錄，請新增
                       </td>
                     </tr>
                   </tbody>
@@ -508,6 +508,7 @@ const props = defineProps({
   show: Boolean,
   records: { type: Array, default: () => [] },
   initialRecord: { type: Object, required: true },
+  statisticsDate: { type: String, default: '' },
   stamps: { type: Array, default: () => [] },
 })
 const emit = defineEmits([
@@ -690,7 +691,7 @@ const reset = () => {
   record.value = {
     id: '',
     status: 'pending',
-    sentDate: new Date().toISOString().slice(0, 10),
+    sentDate: props.statisticsDate || new Date().toISOString().slice(0, 10),
     sender: '',
     referenceNumber: '',
     recipient: '',
