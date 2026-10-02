@@ -50,7 +50,7 @@
             :class="{ 'fab-label-show': isMenuOpen }"
             style="transition-delay: 100ms"
           >
-            歷史採購紀錄
+            歷史採購紀錄與入庫維護
           </span>
           <button
             @click="handleHistory"

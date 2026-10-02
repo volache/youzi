@@ -56,16 +56,41 @@
             </button>
           </div>
           <section v-show="activeTab === 'entry'" class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-lg font-semibold text-slate-800">
                 {{ record.id ? '編輯待寄紀錄' : '新增郵寄資料' }}
               </h3>
-              <button
-                class="btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm"
-                @click="reset"
-              >
-                清空欄位
-              </button>
+              <div class="flex items-center gap-2">
+                <template v-if="currentPendingIndex !== -1">
+                  <button
+                    class="btn bg-slate-100 text-sm text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canNavigatePrevious"
+                    :aria-label="`上一筆待寄紀錄（目前第 ${currentPendingIndex + 1} 筆）`"
+                    title="上一筆待寄紀錄"
+                    @click="navigatePendingRecord(-1)"
+                  >
+                    ← 上一筆
+                  </button>
+                  <span class="min-w-12 text-center text-xs text-slate-500" aria-live="polite"
+                    >{{ currentPendingIndex + 1 }} / {{ pendingRecords.length }}</span
+                  >
+                  <button
+                    class="btn bg-slate-100 text-sm text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canNavigateNext"
+                    :aria-label="`下一筆待寄紀錄（目前第 ${currentPendingIndex + 1} 筆）`"
+                    title="下一筆待寄紀錄"
+                    @click="navigatePendingRecord(1)"
+                  >
+                    下一筆 →
+                  </button>
+                </template>
+                <button
+                  class="btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm"
+                  @click="reset"
+                >
+                  清空欄位
+                </button>
+              </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
               <label class="text-sm font-medium text-slate-700 md:order-1"
@@ -93,12 +118,17 @@
                   @select="fillRecipientAddress"
               /></label>
               <label v-if="trackingRequired" class="text-sm font-medium text-slate-700 md:order-7"
-                >掛號號碼 <span class="text-danger-600">*</span
-                ><input
+                >掛號追蹤號碼<input
                   v-model="record.trackingNumber"
                   class="input mt-1 w-full"
                   placeholder="請輸入追蹤號碼"
               /></label>
+              <p
+                v-if="trackingRequired"
+                class="mt-5 self-center text-xs text-slate-500 md:order-8 md:col-span-3"
+              >
+                可先儲存待寄並稍後補填；確認寄出前，掛號類型須填妥此欄位。
+              </p>
               <label class="text-sm font-medium text-slate-700 md:order-6 md:col-span-3"
                 >收件地址（選填）<input v-model="record.recipientAddress" class="input mt-1 w-full"
               /></label>
@@ -170,28 +200,30 @@
                   </button>
                 </div>
               </div>
+              <p v-if="recommendationMessage" class="mt-3 text-sm text-amber-800">
+                {{ recommendationMessage }}
+              </p>
               <div class="mt-4 border-t border-primary-200 pt-4">
                 <p class="text-sm font-medium text-slate-700">手動調整面額與張數</p>
-                <div class="mt-2 grid grid-cols-10 gap-1">
-                  <label
-                    v-for="stamp in stamps"
-                    :key="stamp.denomination"
-                    class="text-xs text-slate-600"
-                    >{{ stamp.denomination }} 元（庫存 {{ stamp.remainingCount }})<input
-                      :value="manualCount(stamp.denomination)"
-                      type="number"
-                      min="0"
-                      :max="stamp.remainingCount"
-                      class="input mt-1 h-9 w-full text-sm"
-                      @input="setManualCount(stamp.denomination, $event.target.value)"
-                  /></label>
+                <div class="mt-2 overflow-x-auto pb-1">
+                  <div class="grid min-w-[660px] grid-cols-11 gap-1">
+                    <label
+                      v-for="stamp in stamps"
+                      :key="stamp.denomination"
+                      class="text-xs text-slate-600"
+                      >{{ stamp.denomination }} 元（庫存 {{ stamp.remainingCount }})<input
+                        :value="manualCount(stamp.denomination)"
+                        type="number"
+                        min="0"
+                        :max="stamp.remainingCount"
+                        class="input mt-1 h-9 w-full text-sm"
+                        @input="setManualCount(stamp.denomination, $event.target.value)"
+                    /></label>
+                  </div>
                 </div>
               </div>
               <p v-if="record.stampCombination.length" class="mt-3 text-sm text-primary-800">
                 已選組合：{{ combinationText(record.stampCombination) }}
-              </p>
-              <p v-if="recommendationMessage" class="mt-3 text-sm text-danger-700">
-                {{ recommendationMessage }}
               </p>
             </div>
             <label class="block text-sm font-medium text-slate-700"
@@ -525,13 +557,14 @@ const methods = [
     name: value.name,
     calculated: true,
   })),
-  { key: 'double_registered', name: '雙掛號', calculated: false },
   { key: 'parcel', name: '包裹', calculated: false },
   { key: 'express', name: '快捷', calculated: false },
 ]
 const record = ref({})
+const originalRecordSnapshot = ref('')
 const recommendations = ref([])
 const recommendationMessage = ref('')
+const recommendationRequested = ref(false)
 const activeTab = ref('entry')
 const isFullscreen = ref(false)
 const stampSource = computed(() => props.stamps)
@@ -597,6 +630,21 @@ const pendingRecordCount = computed(
 const visiblePendingRecords = computed(() =>
   filteredRecords.value.filter(item => item.status === 'pending')
 )
+const pendingRecords = computed(() => props.records.filter(item => item.status === 'pending'))
+const currentPendingIndex = computed(() =>
+  pendingRecords.value.findIndex(item => item.id === record.value.id)
+)
+const canNavigatePrevious = computed(() => currentPendingIndex.value > 0)
+const canNavigateNext = computed(
+  () =>
+    currentPendingIndex.value >= 0 && currentPendingIndex.value < pendingRecords.value.length - 1
+)
+const hasUnsavedRecordChanges = computed(
+  () =>
+    Boolean(record.value.id) &&
+    Boolean(originalRecordSnapshot.value) &&
+    JSON.stringify(record.value) !== originalRecordSnapshot.value
+)
 const selectedPendingRecords = computed(() => {
   const selectedIds = new Set(selectedPendingIds.value)
   return props.records.filter(item => item.status === 'pending' && selectedIds.has(item.id))
@@ -624,6 +672,7 @@ watch(
   () => props.initialRecord,
   value => {
     record.value = JSON.parse(JSON.stringify(value))
+    originalRecordSnapshot.value = JSON.stringify(record.value)
     recommendations.value = []
     recommendationMessage.value = ''
   },
@@ -631,6 +680,15 @@ watch(
 )
 watch(calculatorPostage, value => {
   if (value !== null) record.value.postage = value
+})
+watch(calculatingCombinations, isCalculating => {
+  if (isCalculating || !recommendationRequested.value) return
+
+  recommendationRequested.value = false
+  if (!calculatorError.value && !calculatorRecommendations.value.length) {
+    recommendationMessage.value =
+      '目前庫存沒有可剛好湊足郵資的郵票組合，請補充庫存或手動調整面額與張數。'
+  }
 })
 const method = computed(() => methods.find(item => item.key === record.value.mailType))
 const canAutoCalculate = computed(() => method.value?.calculated)
@@ -710,11 +768,25 @@ const reset = () => {
   }
   recommendations.value = []
   recommendationMessage.value = ''
+  originalRecordSnapshot.value = JSON.stringify(record.value)
 }
 const edit = item => {
   record.value = JSON.parse(JSON.stringify(item))
+  originalRecordSnapshot.value = JSON.stringify(record.value)
   recommendations.value = []
   activeTab.value = 'entry'
+}
+const navigatePendingRecord = direction => {
+  if (hasUnsavedRecordChanges.value) {
+    const shouldDiscardChanges = window.confirm(
+      '目前的修改尚未儲存，確定要切換到另一筆待寄紀錄嗎？'
+    )
+    if (!shouldDiscardChanges) return
+  }
+
+  const targetIndex = currentPendingIndex.value + direction
+  const target = pendingRecords.value[targetIndex]
+  if (target) edit(target)
 }
 const openCancellation = item => {
   cancellingRecord.value = item
@@ -787,13 +859,17 @@ const isSelected = combo =>
   JSON.stringify(record.value.stampCombination) === JSON.stringify(combo.items)
 const calculate = () => {
   recommendationMessage.value = ''
+  recommendationRequested.value = true
   inventoryOnly.value = true
   selectMailType(record.value.mailType)
   calculatorWeight.value = record.value.weight
   if (canAutoCalculate.value) calculatePostage()
   else calculateCombinationsForPostage(record.value.postage)
 }
-const savePending = () => emit('save-pending', record.value)
+const savePending = () => {
+  emit('save-pending', record.value)
+  originalRecordSnapshot.value = JSON.stringify(record.value)
+}
 const confirmSent = () => emit('confirm-record', record.value)
 const csvCell = value => `"${String(value ?? '').replaceAll('"', '""')}"`
 const exportRecords = () => {

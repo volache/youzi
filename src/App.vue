@@ -85,18 +85,21 @@
         v-if="showHistoryModal"
         :show="showHistoryModal"
         :stamps="stamps"
+        :statistics-date="statisticsDate"
         :monthly-postage-records="monthlyPostageRecords"
         :current-record="currentRecord"
         :editing-record="editingRecord"
         :average-monthly-purchases="averageMonthlyPurchases"
         @close="showHistoryModal = false"
         @save-history-record="saveHistoryRecord"
+        @confirm-stock-receipt="confirmStockReceipt"
         @start-edit-history="startEditHistory"
         @delete-history-record="deleteHistoryRecord"
         @cancel-edit-add-history="cancelEditAddHistory"
         @handle-month-input-blur="handleMonthInputBlur"
         @update-current-record-month="updateCurrentRecordMonth"
         @update-current-record-purchase="updateCurrentRecordPurchase"
+        @update-current-record-notes="updateCurrentRecordNotes"
         @sanitize-history-input="sanitizeHistoryInput"
         @export-history-csv="exportHistoryCSV"
         @import-history-csv="importHistoryCSV"
@@ -505,11 +508,14 @@ const {
   handleMonthInputBlur,
   updateCurrentRecordMonth,
   updateCurrentRecordPurchase,
+  updateCurrentRecordNotes,
+  confirmStockReceipt,
 } = useHistoryManagement({
   monthlyPostageRecords,
   currentRecord,
   editingRecord,
   stamps,
+  stampInventoryTransactions,
   formatAndValidateMonthInput,
 })
 </script>

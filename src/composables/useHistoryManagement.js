@@ -10,6 +10,7 @@ export function useHistoryManagement(dependencies) {
     currentRecord,
     editingRecord,
     stamps,
+    stampInventoryTransactions,
     formatAndValidateMonthInput,
   } = dependencies
 
@@ -64,6 +65,13 @@ export function useHistoryManagement(dependencies) {
     }
   }
 
+  /**
+   * 更新歷史採購紀錄的備註。
+   */
+  function updateCurrentRecordNotes(value) {
+    currentRecord.value.notes = String(value || '').slice(0, 1000)
+  }
+
   // === 編輯功能 ===
 
   /**
@@ -81,6 +89,7 @@ export function useHistoryManagement(dependencies) {
       currentRecord.value = {
         month: formatAndValidateMonthInput(record.month),
         purchases: JSON.parse(JSON.stringify(record.purchases)),
+        notes: String(record.notes || ''),
       }
 
       // 確保所有面額都有對應的採購數據
@@ -98,12 +107,12 @@ export function useHistoryManagement(dependencies) {
   function cancelEditAddHistory() {
     try {
       editingRecord.value = null
-      currentRecord.value = { month: '', purchases: {} }
+      currentRecord.value = { month: '', purchases: {}, notes: '' }
     } catch (error) {
       console.error('取消編輯時發生錯誤:', error)
       // 強制重設
       editingRecord.value = null
-      currentRecord.value = { month: '', purchases: {} }
+      currentRecord.value = { month: '', purchases: {}, notes: '' }
     }
   }
 
@@ -145,6 +154,80 @@ export function useHistoryManagement(dependencies) {
       console.error('儲存歷史紀錄時發生錯誤:', error)
       await showAlert('儲存失敗，請重試。', '儲存錯誤', 'error')
       showErrorToast('儲存失敗', '請檢查輸入內容後重試')
+    }
+  }
+
+  /**
+   * 確認實際收到的郵票並入庫，同時累加到指定月份的採購統計。
+   */
+  async function confirmStockReceipt(receipt) {
+    try {
+      const postingMonth = formatAndValidateMonthInput(receipt?.postingMonth)
+      if (!postingMonth) {
+        await showAlert('請輸入有效的登帳月份。', '輸入錯誤', 'warning')
+        return false
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(receipt?.receivedDate || '')) {
+        await showAlert('請選擇入庫日期。', '輸入錯誤', 'warning')
+        return false
+      }
+
+      const purchases = {}
+      const combination = []
+      let totalCount = 0
+      let totalValue = 0
+      stamps.value.forEach(stamp => {
+        const count = Math.max(0, Math.floor(Number(receipt.purchases?.[stamp.denomination]) || 0))
+        purchases[stamp.denomination] = count
+        if (!count) return
+        combination.push({ denomination: stamp.denomination, count })
+        totalCount += count
+        totalValue += stamp.denomination * count
+      })
+
+      if (!totalCount) {
+        await showAlert('請至少輸入一種面額的實收張數。', '輸入錯誤', 'warning')
+        return false
+      }
+
+      stamps.value.forEach(stamp => {
+        stamp.remainingCount += purchases[stamp.denomination]
+      })
+
+      const monthlyRecord = monthlyPostageRecords.value.find(
+        record => record.month === postingMonth
+      )
+      if (monthlyRecord) {
+        stamps.value.forEach(stamp => {
+          const denomination = stamp.denomination
+          monthlyRecord.purchases[denomination] =
+            (Number(monthlyRecord.purchases[denomination]) || 0) + purchases[denomination]
+        })
+      } else {
+        monthlyPostageRecords.value.push({ month: postingMonth, purchases })
+      }
+      sortRecordsByMonth()
+
+      stampInventoryTransactions.value.unshift({
+        id: crypto.randomUUID(),
+        occurredAt: new Date().toISOString(),
+        type: 'purchase_receipt',
+        combination,
+        postingMonth,
+        receiptNumber: String(receipt.receiptNumber || '').trim(),
+        notes: String(receipt.notes || '').trim(),
+        receivedDate: receipt.receivedDate,
+      })
+      showSuccessToast(
+        '入庫完成',
+        `已入庫 ${totalCount} 張、NT$ ${totalValue}，並累加至 ${postingMonth}`
+      )
+      return true
+    } catch (error) {
+      console.error('確認入庫失敗:', error)
+      await showAlert('入庫失敗，請重試。', '入庫錯誤', 'error')
+      showErrorToast('入庫失敗', '請檢查輸入內容後重試')
+      return false
     }
   }
 
@@ -288,6 +371,7 @@ export function useHistoryManagement(dependencies) {
   return {
     // 主要功能
     saveHistoryRecord,
+    confirmStockReceipt,
     startEditHistory,
     deleteHistoryRecord,
     cancelEditAddHistory,
@@ -296,5 +380,6 @@ export function useHistoryManagement(dependencies) {
     handleMonthInputBlur,
     updateCurrentRecordMonth,
     updateCurrentRecordPurchase,
+    updateCurrentRecordNotes,
   }
 }

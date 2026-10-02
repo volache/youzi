@@ -10,7 +10,7 @@
           aria-labelledby="history-title"
         >
           <ModalHeader
-            title="歷史採購紀錄"
+            title="歷史採購紀錄與入庫維護"
             title-id="history-title"
             title-class="text-fuchsia-600"
             fullscreen-enabled
@@ -49,83 +49,86 @@
                 />
               </div>
 
-              <button
-                v-if="!showAddForm"
-                @click="showAddForm = true"
-                class="btn bg-fuchsia-600 hover:bg-fuchsia-700 text-white focus:ring-fuchsia-500 text-sm flex items-center"
-              >
-                <AppIcon name="plus" class="mr-2" size="1.25rem" />
-                新增採購紀錄
-              </button>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-if="!showAddForm && !showReceiptForm"
+                  @click="showAddForm = true"
+                  class="btn bg-fuchsia-600 hover:bg-fuchsia-700 text-white focus:ring-fuchsia-500 text-sm flex items-center"
+                >
+                  <AppIcon name="plus" class="mr-2" size="1.25rem" />
+                  新增歷史紀錄
+                </button>
+                <button
+                  v-if="!showReceiptForm && !showAddForm"
+                  @click="startStockReceipt"
+                  class="btn bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500 text-sm flex items-center"
+                >
+                  <AppIcon name="plus" class="mr-2" size="1.25rem" />
+                  郵票入庫
+                </button>
+              </div>
             </div>
 
             <!-- 新增/編輯紀錄表單 -->
             <Transition name="form-slide">
-              <div v-if="showAddForm || editingRecord" class="mb-6 p-4 bg-slate-50 rounded-card">
+              <div
+                v-if="showAddForm || editingRecord"
+                class="mb-6 rounded-card border border-fuchsia-200 bg-fuchsia-50 p-4"
+              >
                 <div class="mb-4">
-                  <h4 class="text-xl font-semibold text-slate-700 mb-4">
+                  <h4 class="text-xl font-semibold text-fuchsia-800">
                     {{ editingRecord ? '編輯紀錄' : '新增紀錄' }}
                   </h4>
+                  <p class="mt-1 text-sm text-fuchsia-700">
+                    僅維護採購統計資料，不會變更現有庫存。
+                  </p>
                 </div>
 
                 <!-- 月份輸入區域 -->
-                <div class="flex items-start gap-4 mb-4">
-                  <!-- 月份輸入 -->
-                  <div class="flex-shrink-0">
-                    <label for="recordMonth" class="block text-sm font-medium text-slate-700 mb-1"
-                      >月份</label
-                    >
-                    <input
-                      type="text"
-                      id="recordMonth"
-                      ref="monthInput"
-                      :value="currentRecord.month"
-                      @input="$emit('update-current-record-month', $event.target.value)"
-                      @blur="$emit('handle-month-input-blur')"
-                      placeholder="例如：202506、11307、114.5"
-                      class="input h-[38px] text-sm focus:ring-fuchsia-500 focus:border-fuchsia-500 w-48"
+                <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <label class="block text-sm font-medium text-slate-700"
+                    >登帳月份
+                    <CustomDatePicker
+                      :model-value="currentRecord.month"
+                      mode="month"
+                      @update:model-value="$emit('update-current-record-month', $event)"
                     />
-                  </div>
-
-                  <!-- 格式說明 -->
-                  <div
-                    class="flex-1 bg-slate-100 px-4 py-3 rounded-lg border border-slate-200 min-h-[76px] flex flex-col justify-center"
-                  >
-                    <div class="font-semibold text-slate-700 text-sm mb-2">月份輸入支援格式：</div>
-                    <div class="grid grid-cols-6 gap-x-2 gap-y-1 text-xs text-slate-600">
-                      <div>• <code class="bg-white px-1 rounded">202506</code> - 西元年月</div>
-                      <div>• <code class="bg-white px-1 rounded">11307</code> - 民國年月</div>
-                      <div>• <code class="bg-white px-1 rounded">114.5</code> - 民國年.月</div>
-                      <div>• <code class="bg-white px-1 rounded">2024.11</code> - 西元年.月</div>
-                      <div>• <code class="bg-white px-1 rounded">2025年6月</code> - 中文格式</div>
-                      <div>• <code class="bg-white px-1 rounded">114年6月</code> - 民國中文</div>
-                    </div>
-                  </div>
+                  </label>
+                  <label class="block text-sm font-medium text-slate-700 md:col-span-3"
+                    >備註（選填）
+                    <input
+                      :value="currentRecord.notes"
+                      @input="$emit('update-current-record-notes', $event.target.value)"
+                      class="input mt-1 h-[38px] w-full text-sm focus:border-fuchsia-500 focus:ring-fuchsia-500"
+                    />
+                  </label>
                 </div>
 
                 <!-- 郵票數量輸入 -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  <div v-for="stamp in stamps" :key="'history-input-' + stamp.denomination">
-                    <label
-                      :for="'record-denom-' + stamp.denomination"
-                      class="block text-sm font-medium text-slate-700"
-                      >{{ stamp.denomination }} 元</label
-                    >
-                    <input
-                      type="number"
-                      :id="'record-denom-' + stamp.denomination"
-                      :value="currentRecord.purchases[stamp.denomination]"
-                      @input="
-                        $emit(
-                          'update-current-record-purchase',
-                          stamp.denomination,
-                          $event.target.value
-                        )
-                      "
-                      min="0"
-                      step="1"
-                      class="input h-[38px] text-right text-sm focus:ring-fuchsia-500 focus:border-fuchsia-500"
-                    />
+                <div class="overflow-x-auto pb-1">
+                  <div class="grid min-w-[660px] grid-cols-11 gap-2">
+                    <div v-for="stamp in stamps" :key="'history-input-' + stamp.denomination">
+                      <label
+                        :for="'record-denom-' + stamp.denomination"
+                        class="block text-sm font-medium text-slate-700"
+                        >{{ stamp.denomination }} 元</label
+                      >
+                      <input
+                        type="number"
+                        :id="'record-denom-' + stamp.denomination"
+                        :value="currentRecord.purchases[stamp.denomination]"
+                        @input="
+                          $emit(
+                            'update-current-record-purchase',
+                            stamp.denomination,
+                            $event.target.value
+                          )
+                        "
+                        min="0"
+                        step="1"
+                        class="input h-[38px] text-right text-sm focus:ring-fuchsia-500 focus:border-fuchsia-500"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div class="mt-4 flex justify-end space-x-3">
@@ -133,10 +136,91 @@
                     @click="$emit('save-history-record')"
                     class="btn bg-fuchsia-600 hover:bg-fuchsia-700 text-white focus:ring-fuchsia-500 text-sm"
                   >
-                    {{ editingRecord ? '保存修改' : '新增紀錄' }}
+                    {{ editingRecord ? '確認修改' : '確認新增' }}
                   </button>
                   <button
                     @click="cancelForm"
+                    class="btn bg-secondary-100 hover:bg-secondary-200 text-secondary-700 focus:ring-secondary-500 text-sm"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            </Transition>
+
+            <!-- 實際入庫表單：只有確認後才會異動目前庫存。 -->
+            <Transition name="form-slide">
+              <div
+                v-if="showReceiptForm"
+                class="mb-6 rounded-card border border-teal-200 bg-teal-50 p-4"
+              >
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 class="text-xl font-semibold text-teal-800">郵票入庫</h4>
+                    <p class="mt-1 text-sm text-teal-700">
+                      確認入庫後才會增加現有庫存，並累加到登帳月份的歷史採購紀錄。
+                    </p>
+                  </div>
+                  <div class="rounded-lg border border-teal-200 bg-white px-3 py-2 text-right">
+                    <p class="text-xs text-slate-500">本次實收入庫</p>
+                    <p class="font-semibold text-teal-800">
+                      {{ receiptTotalCount }} 張／NT$ {{ formatNumber(receiptTotalValue) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <label class="text-sm font-medium text-slate-700"
+                    >入庫日期<CustomDatePicker v-model="stockReceipt.receivedDate"
+                  /></label>
+                  <label class="text-sm font-medium text-slate-700"
+                    >登帳月份<CustomDatePicker
+                      v-model="stockReceipt.postingMonth"
+                      mode="month"
+                    /> </label
+                  ><label class="text-sm font-medium text-slate-700"
+                    >憑證／採購單號（選填）<input
+                      v-model="stockReceipt.receiptNumber"
+                      class="input mt-1 h-[38px] w-full text-sm focus:border-teal-500 focus:ring-teal-500"
+                    /> </label
+                  ><label class="text-sm font-medium text-slate-700"
+                    >備註（選填）<input
+                      v-model="stockReceipt.notes"
+                      class="input mt-1 h-[38px] w-full text-sm focus:border-teal-500 focus:ring-teal-500"
+                    />
+                  </label>
+                </div>
+
+                <div class="mt-4 overflow-x-auto pb-1">
+                  <div class="grid min-w-[660px] grid-cols-11 gap-2">
+                    <div v-for="stamp in stamps" :key="'receipt-denom-' + stamp.denomination">
+                      <label
+                        :for="'receipt-denom-' + stamp.denomination"
+                        class="block text-sm font-medium text-slate-700"
+                        >{{ stamp.denomination }} 元</label
+                      >
+                      <input
+                        :id="'receipt-denom-' + stamp.denomination"
+                        v-model.number="stockReceipt.purchases[stamp.denomination]"
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="input mt-1 h-[38px] w-full text-right text-sm focus:border-teal-500 focus:ring-teal-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 flex justify-end space-x-3">
+                  <button
+                    @click="confirmStockReceipt"
+                    :disabled="!canConfirmStockReceipt"
+                    class="btn bg-teal-600 hover:bg-teal-700 text-sm text-white focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    確認入庫
+                  </button>
+                  <button
+                    @click="cancelStockReceipt"
                     class="btn bg-secondary-100 hover:bg-secondary-200 text-secondary-700 focus:ring-secondary-500 text-sm"
                   >
                     取消
@@ -272,10 +356,12 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUtils } from '../composables/useUtils'
 import ModalHeader from './ModalHeader.vue'
 import AppIcon from './AppIcon.vue'
+import CustomDatePicker from './CustomDatePicker.vue'
 
-defineProps({
+const props = defineProps({
   show: Boolean,
   stamps: Array,
+  statisticsDate: { type: String, default: '' },
   monthlyPostageRecords: Array,
   currentRecord: Object,
   editingRecord: Object,
@@ -285,6 +371,7 @@ defineProps({
 const emit = defineEmits([
   'close',
   'save-history-record',
+  'confirm-stock-receipt',
   'start-edit-history',
   'delete-history-record',
   'cancel-edit-add-history',
@@ -294,6 +381,7 @@ const emit = defineEmits([
   'import-history-csv',
   'update-current-record-month',
   'update-current-record-purchase',
+  'update-current-record-notes',
 ])
 
 const { formatNumber, formatMonthDisplay } = useUtils()
@@ -303,12 +391,33 @@ const isFullscreen = ref(false)
 
 // 控制新增表單顯示
 const showAddForm = ref(false)
+const showReceiptForm = ref(false)
+const stockReceipt = ref(createEmptyStockReceipt())
 
 // 檔案輸入參考
 const fileInput = ref(null)
 
-// 月份輸入參考
-const monthInput = ref(null)
+const receiptTotalCount = computed(() =>
+  Object.values(stockReceipt.value.purchases).reduce(
+    (total, count) => total + Math.max(0, Math.floor(Number(count) || 0)),
+    0
+  )
+)
+const receiptTotalValue = computed(() =>
+  (props.stamps || []).reduce(
+    (total, stamp) =>
+      total +
+      stamp.denomination *
+        Math.max(0, Math.floor(Number(stockReceipt.value.purchases[stamp.denomination]) || 0)),
+    0
+  )
+)
+const canConfirmStockReceipt = computed(
+  () =>
+    Boolean(stockReceipt.value.receivedDate) &&
+    Boolean(stockReceipt.value.postingMonth) &&
+    receiptTotalCount.value > 0
+)
 
 // 計算屬性：模態視窗內容樣式
 const modalContentClass = computed(() => {
@@ -349,6 +458,7 @@ onUnmounted(() => {
 
 // 開始編輯時顯示表單
 function startEdit(record) {
+  showReceiptForm.value = false
   showAddForm.value = true
   emit('start-edit-history', record)
 
@@ -370,14 +480,6 @@ function startEdit(record) {
         behavior: 'smooth',
       })
     }
-
-    // 聚焦到月份輸入框
-    if (monthInput.value) {
-      setTimeout(() => {
-        monthInput.value.focus()
-        monthInput.value.select()
-      }, 300) // 等待滾動動畫完成
-    }
   })
 }
 
@@ -385,6 +487,36 @@ function startEdit(record) {
 function cancelForm() {
   showAddForm.value = false
   emit('cancel-edit-add-history')
+}
+
+function createEmptyStockReceipt() {
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(props.statisticsDate)
+    ? props.statisticsDate
+    : new Date().toISOString().slice(0, 10)
+  return {
+    receivedDate: today,
+    postingMonth: today.slice(0, 7),
+    receiptNumber: '',
+    notes: '',
+    purchases: Object.fromEntries((props.stamps || []).map(stamp => [stamp.denomination, 0])),
+  }
+}
+
+function startStockReceipt() {
+  showAddForm.value = false
+  showReceiptForm.value = true
+  stockReceipt.value = createEmptyStockReceipt()
+}
+
+function cancelStockReceipt() {
+  showReceiptForm.value = false
+  stockReceipt.value = createEmptyStockReceipt()
+}
+
+function confirmStockReceipt() {
+  if (!canConfirmStockReceipt.value) return
+  emit('confirm-stock-receipt', JSON.parse(JSON.stringify(stockReceipt.value)))
+  cancelStockReceipt()
 }
 
 // 觸發檔案選擇

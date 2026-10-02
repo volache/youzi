@@ -8,7 +8,7 @@ export const APP_DEFAULTS = Object.freeze({
   unusedPriority: 999,
 })
 
-export const STAMP_DENOMINATIONS = Object.freeze([1, 5, 6, 8, 10, 12, 15, 20, 28, 35])
+export const STAMP_DENOMINATIONS = Object.freeze([1, 5, 6, 7, 8, 10, 12, 15, 20, 28, 35])
 
 export const STAMP_CATALOG = Object.freeze(
   STAMP_DENOMINATIONS.map(denomination => Object.freeze({ denomination }))
@@ -23,7 +23,7 @@ export function createDefaultStamps() {
     purchaseMode: 'auto',
     fixedPurchaseCount: 0,
     minStock: APP_DEFAULTS.minStock,
-    priority: 0,
+    priority: APP_DEFAULTS.unusedPriority,
   }))
 }
 

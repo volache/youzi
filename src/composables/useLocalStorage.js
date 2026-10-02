@@ -4,6 +4,7 @@ import {
   normalizePurchaseCount,
   normalizePurchaseMode,
 } from './purchasePlanning.js'
+import { APP_DEFAULTS } from '../config/stampCatalog.js'
 
 /**
  * 本地儲存管理模組
@@ -13,7 +14,7 @@ import {
 const CONFIG = {
   STORAGE_KEY: 'postageCalculatorData',
   BACKUP_STORAGE_KEY: 'postageCalculatorData.backup',
-  SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 5,
   DEBOUNCE_DELAY: 500,
   ROC_BASE_YEAR: 1911,
   MAX_FUTURE_YEARS: 10,
@@ -331,6 +332,7 @@ export function useLocalStorage() {
       .map(record => ({
         month: record.month,
         purchases: sanitizePurchasesData(record.purchases),
+        notes: String(record.notes || '').slice(0, 1000),
       }))
   }
 
@@ -375,8 +377,14 @@ export function useLocalStorage() {
         id: item.id,
         recordId: String(item.recordId || ''),
         occurredAt: typeof item.occurredAt === 'string' ? item.occurredAt : '',
-        type: ['mailing_debit', 'mailing_credit'].includes(item.type) ? item.type : 'mailing_debit',
+        type: ['mailing_debit', 'mailing_credit', 'purchase_receipt'].includes(item.type)
+          ? item.type
+          : 'mailing_debit',
         combination: sanitizeStampCombination(item.combination),
+        postingMonth: typeof item.postingMonth === 'string' ? item.postingMonth.slice(0, 7) : '',
+        receivedDate: typeof item.receivedDate === 'string' ? item.receivedDate.slice(0, 10) : '',
+        receiptNumber: String(item.receiptNumber || '').slice(0, 100),
+        notes: String(item.notes || '').slice(0, 1000),
       }))
   }
 
@@ -511,10 +519,22 @@ export function useLocalStorage() {
   function migrateData(data) {
     if (!data || typeof data !== 'object') return {}
 
-    return {
+    const schemaVersion = Number.isInteger(data.schemaVersion) ? data.schemaVersion : 1
+    const migratedData = {
       ...data,
-      schemaVersion: Number.isInteger(data.schemaVersion) ? data.schemaVersion : 1,
+      schemaVersion,
     }
+
+    // 7 元面額加入時曾以 0 作為優先級。修正舊資料，使其與未使用的其他面額一致。
+    // 僅遷移到第 4 版以前的資料，不覆蓋使用者後續自行設定的優先級。
+    if (schemaVersion < 4 && Array.isArray(migratedData.stamps)) {
+      const sevenDollarStamp = migratedData.stamps.find(stamp => stamp?.denomination === 7)
+      if (sevenDollarStamp && Number(sevenDollarStamp.priority) === 0) {
+        sevenDollarStamp.priority = APP_DEFAULTS.unusedPriority
+      }
+    }
+
+    return migratedData
   }
 
   /**

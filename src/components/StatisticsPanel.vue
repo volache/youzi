@@ -80,11 +80,12 @@ const props = defineProps({
 
 const { formatNumber } = useUtils()
 
-// 格式化剩餘郵票總金額算式，在面額 10 元和 12 元之間斷行
+// 格式化剩餘郵票總金額算式，在面額 10 元和 12 元之間斷行。
+// 低面額包含 1、5、6、7、8、10 元，避免欄位擴充後說明與實際分行規則不一致。
 const remainingValueFormulaLines = computed(() => {
   if (!props.stamps?.length) return []
 
-  const firstLine = [] // 1元到10元
+  const firstLine = [] // 1、5、6、7、8、10 元
   const secondLine = [] // 12元到35元
 
   props.stamps.forEach(stamp => {

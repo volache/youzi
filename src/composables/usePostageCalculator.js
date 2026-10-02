@@ -48,7 +48,7 @@ export function usePostageCalculator() {
   // 報告與紀錄數據
   const reportData = ref(null)
   const monthlyPostageRecords = ref([])
-  const currentRecord = ref({ month: '', purchases: {} })
+  const currentRecord = ref({ month: '', purchases: {}, notes: '' })
   const editingRecord = ref(null)
   const currentRuleMode = ref('custom') // 預設為自定義模式
   const mailRecordState = useMailRecords({ stamps })
