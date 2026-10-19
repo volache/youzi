@@ -120,6 +120,7 @@
               <label v-if="trackingRequired" class="text-sm font-medium text-slate-700 md:order-7"
                 >掛號追蹤號碼<input
                   v-model="record.trackingNumber"
+                  type="text"
                   class="input mt-1 w-full"
                   placeholder="請輸入追蹤號碼"
               /></label>
@@ -246,14 +247,29 @@
           <section v-show="activeTab === 'list'">
             <div class="flex items-center justify-between gap-2 mb-3">
               <h3 class="text-lg font-semibold text-slate-800">寄件清單</h3>
-              <button
-                class="btn bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500 text-sm flex items-center"
-                @click="exportRecords"
-              >
-                <AppIcon name="file-download-outline" class="mr-2" size="1.25rem" />
-                匯出指定期間 CSV
-              </button>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  class="btn bg-emerald-600 hover:bg-emerald-700 text-white text-sm"
+                  :disabled="exportingExcel"
+                  @click="exportRecords('xlsx')"
+                >
+                  {{ exportingExcel ? '正在匯出…' : '匯出指定期間 Excel' }}
+                </button>
+                <button
+                  class="btn bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500 text-sm flex items-center"
+                  @click="exportRecords('csv')"
+                >
+                  <AppIcon name="file-download-outline" class="mr-2" size="1.25rem" />
+                  匯出指定期間 CSV
+                </button>
+              </div>
             </div>
+            <p class="mb-3 text-xs text-slate-500">
+              使用 Excel 開啟時，建議匯出 Excel 格式，以完整保留掛號號碼及開頭的 0。
+            </p>
+            <p v-if="exportError" role="alert" class="mb-3 text-sm text-danger-600">
+              {{ exportError }}
+            </p>
             <div class="grid grid-cols-2 gap-2 mb-3 md:grid-cols-5">
               <label class="text-xs text-slate-600"
                 >起日<CustomDatePicker v-model="exportStart"
@@ -530,6 +546,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { POSTAGE_RATES } from '../composables/postageRates'
 import { usePostageCombinator } from '../composables/usePostageCombinator'
 import { downloadTextFile } from '../utils/fileDownload'
+import { createMailRecordsExcel } from '../utils/mailRecordsExcel'
 import ModalHeader from './ModalHeader.vue'
 import AppIcon from './AppIcon.vue'
 import CustomSelect from './CustomSelect.vue'
@@ -872,7 +889,10 @@ const savePending = () => {
 }
 const confirmSent = () => emit('confirm-record', record.value)
 const csvCell = value => `"${String(value ?? '').replaceAll('"', '""')}"`
-const exportRecords = () => {
+const exportingExcel = ref(false)
+const exportError = ref('')
+const exportRecords = async (format = 'csv') => {
+  exportError.value = ''
   const selected = props.records.filter(
     item =>
       item.status === 'sent' &&
@@ -923,6 +943,24 @@ const exportRecords = () => {
     selected.reduce((total, item) => total + (Number(item.postage) || 0), 0),
   ])
   const range = `${exportStart.value || '開始'}至${exportEnd.value || '結束'}`
+  if (format === 'xlsx') {
+    if (exportingExcel.value) return
+    exportingExcel.value = true
+    try {
+      const buffer = await createMailRecordsExcel(rows)
+      downloadTextFile(
+        buffer,
+        `郵寄紀錄_${range}.xlsx`,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      )
+    } catch (error) {
+      console.error('匯出 Excel 失敗:', error)
+      exportError.value = 'Excel 匯出失敗，請稍後再試。'
+    } finally {
+      exportingExcel.value = false
+    }
+    return
+  }
   downloadTextFile(
     `\uFEFF${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}`,
     `郵寄紀錄_${range}.csv`,
